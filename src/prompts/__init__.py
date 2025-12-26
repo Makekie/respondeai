@@ -1,0 +1,1 @@
+from .templates import PromptTemplates, get_gerar_questoes_prompt, get_responder_prompt
