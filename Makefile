@@ -21,6 +21,8 @@ clean:
 	rm -rf .venv
 
 run:
+	@echo "🚀 Iniciando aplicação..."
+	@if [ ! -d ".venv" ]; then echo "⚠️ Ambiente virtual não encontrado. Execute 'make install' primeiro."; exit 1; fi
 	cd src && uv run uvicorn $(APP_FILE):$(APP_INSTANCE) --reload --host 0.0.0.0 --port $(PORT)
 
 test_service:
