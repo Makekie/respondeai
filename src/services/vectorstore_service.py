@@ -153,31 +153,26 @@ class VectorStoreService:
         return await self.criar_indice()
     
     async def adicionar_documentos(self, documentos: List[Document]) -> List[str]:
-        """Adiciona documentos ao vector store em lotes pequenos"""
+        """Adiciona documentos ao vector store um por vez para evitar problemas de contexto"""
         try:
-            # Processa em lotes muito pequenos para evitar problemas de embedding
-            batch_size = 10  # Lotes pequenos para embeddings
             all_ids = []
+            total = len(documentos)
             
-            for i in range(0, len(documentos), batch_size):
-                batch = documentos[i:i + batch_size]
-                logger.info(f"📦 Processando lote de embeddings {i//batch_size + 1}")
-                
+            logger.info(f"📄 Processando {total} documentos individualmente")
+            
+            for i, doc in enumerate(documentos, 1):
                 try:
-                    ids = self._vectorstore.add_documents(batch)
+                    ids = self._vectorstore.add_documents([doc])
                     all_ids.extend(ids)
-                except Exception as batch_error:
-                    logger.error(f"❌ Erro no lote {i//batch_size + 1}: {batch_error}")
-                    # Tenta processar um por vez se o lote falhar
-                    for doc in batch:
-                        try:
-                            single_id = self._vectorstore.add_documents([doc])
-                            all_ids.extend(single_id)
-                        except Exception as single_error:
-                            logger.error(f"❌ Erro ao processar documento individual: {single_error}")
-                            continue
+                    
+                    if i % 50 == 0:  # Log a cada 50 documentos
+                        logger.info(f"📦 Processados {i}/{total} documentos")
+                        
+                except Exception as doc_error:
+                    logger.error(f"❌ Erro no documento {i}: {doc_error}")
+                    continue
             
-            logger.info(f"✅ Adicionados {len(all_ids)} documentos")
+            logger.info(f"✅ Adicionados {len(all_ids)} de {total} documentos")
             return all_ids
             
         except Exception as e:

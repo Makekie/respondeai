@@ -47,15 +47,10 @@ def get_llm_precise(temperature: float = 0.2) -> ChatOllama:
 
 
 def get_embeddings() -> OllamaEmbeddings:
-    """Retorna instância do OllamaEmbeddings configurada com parâmetros otimizados."""
+    """Retorna instância do OllamaEmbeddings configurada."""
     return OllamaEmbeddings(
         base_url=settings.OLLAMA_BASE_URL,
-        model=settings.OLLAMA_EMBEDDING_MODEL,
-        # Parâmetros para evitar problemas de contexto
-        show_progress=False,
-        # Processa um documento por vez para evitar problemas de batch
-        embed_instruction="",
-        query_instruction=""
+        model=settings.OLLAMA_EMBEDDING_MODEL
     )
 
 
