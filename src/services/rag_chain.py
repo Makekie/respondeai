@@ -213,12 +213,26 @@ class RAGChainService:
                 })
                 
                 # Verifica se o resultado é válido
-                if not isinstance(resultado, dict) or "questoes" not in resultado:
-                    logger.error(f"Resultado inválido do LLM: {resultado}")
+                if isinstance(resultado, dict):
+                    # Se retornou uma questão individual, converte para array
+                    if "numero" in resultado and "enunciado" in resultado:
+                        resultado = {"questoes": [resultado]}
+                    # Se já tem o formato correto
+                    elif "questoes" in resultado:
+                        pass
+                    else:
+                        logger.error(f"Resultado inválido do LLM: {resultado}")
+                        return {
+                            "sucesso": False,
+                            "questoes": [],
+                            "erro": "LLM retornou formato inválido"
+                        }
+                else:
+                    logger.error(f"Resultado não é dict: {type(resultado)}")
                     return {
                         "sucesso": False,
                         "questoes": [],
-                        "erro": "LLM retornou formato inválido"
+                        "erro": "LLM retornou tipo inválido"
                     }
                 
             except Exception as parse_error:

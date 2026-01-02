@@ -69,33 +69,65 @@ async def responder_pergunta(request: ResponderPerguntaRequest):
         )
 
 
+from pydantic import BaseModel, Field
+from typing import List, Optional
+
+class ValidarRespostaRequest(BaseModel):
+    pergunta: str = Field(..., description="Pergunta a ser validada")
+    alternativas: Optional[List[str]] = Field(default=None, description="Alternativas se houver")
+    contexto_adicional: Optional[str] = Field(default=None, description="Contexto extra")
+    resposta_usuario: str = Field(..., description="Resposta escolhida pelo usuário")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "pergunta": "De acordo com a CF/88, são direitos sociais, EXCETO:",
+                "alternativas": [
+                    "A) Educação",
+                    "B) Saúde", 
+                    "C) Propriedade privada",
+                    "D) Trabalho",
+                    "E) Moradia"
+                ],
+                "resposta_usuario": "C"
+            }
+        }
+
+
 @router.post(
     "/validar",
     summary="Validar resposta do usuário",
     description="Verifica se a resposta do usuário está correta"
 )
-async def validar_resposta(
-    request: ResponderPerguntaRequest,
-    resposta_usuario: str
-):
+async def validar_resposta(request: ValidarRespostaRequest):
     """
     Valida a resposta do usuário e fornece feedback.
     
-    ## Parâmetros adicionais:
+    ## Parâmetros:
+    - **pergunta**: Texto completo da questão
+    - **alternativas**: Lista de alternativas (opcional)
+    - **contexto_adicional**: Informações extras (opcional)
     - **resposta_usuario**: Resposta escolhida pelo usuário (letra ou CERTO/ERRADO)
     """
     try:
+        # Converte para ResponderPerguntaRequest
+        pergunta_request = ResponderPerguntaRequest(
+            pergunta=request.pergunta,
+            alternativas=request.alternativas,
+            contexto_adicional=request.contexto_adicional
+        )
+        
         service = PerguntasService()
-        resultado = await service.responder_pergunta(request)
+        resultado = await service.responder_pergunta(pergunta_request)
         
         resposta_correta = resultado.resposta_correta.upper().strip()
-        resposta_user = resposta_usuario.upper().strip()
+        resposta_user = request.resposta_usuario.upper().strip()
         
         acertou = resposta_correta == resposta_user
         
         return {
             "acertou": acertou,
-            "resposta_usuario": resposta_usuario,
+            "resposta_usuario": request.resposta_usuario,
             "resposta_correta": resultado.resposta_correta,
             "explicacao": resultado.explicacao_detalhada,
             "fundamento_legal": resultado.fundamento_legal,
