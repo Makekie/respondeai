@@ -12,8 +12,6 @@ class DificuldadeEnum(str, Enum):
 
 class TipoQuestaoEnum(str, Enum):
     MULTIPLA_ESCOLHA = "multipla_escolha"
-    CERTO_ERRADO = "certo_errado"
-    DISSERTATIVA = "dissertativa"
 
 
 # ============ SCHEMAS PARA OUTPUT PARSER ============
