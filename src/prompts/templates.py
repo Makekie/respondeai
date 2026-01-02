@@ -14,14 +14,6 @@ class PromptTemplates:
         DificuldadeEnum.DIFICIL: "avançado, com pegadinhas, exceções e jurisprudência consolidada"
     }
     
-    ESTILOS_BANCA = {
-        "CESPE": "estilo CESPE/CEBRASPE com afirmações para julgar como CERTO ou ERRADO, técnicas e com pegadinhas sutis",
-        "FCC": "estilo FCC com 5 alternativas, linguagem formal e foco em letra de lei",
-        "FGV": "estilo FGV com casos práticos e interpretação de texto legal",
-        "VUNESP": "estilo VUNESP com alternativas claras e foco em conhecimento direto",
-        "ESAF": "estilo ESAF com questões complexas e foco em legislação tributária/administrativa"
-    }
-    
     FORMATOS_QUESTAO = {
         TipoQuestaoEnum.MULTIPLA_ESCOLHA: """
 - Enunciado claro e objetivo
@@ -42,10 +34,12 @@ class PromptTemplates:
 
 
 # ============ PROMPT PARA GERAR QUESTÕES ============
-GERAR_QUESTOES_TEMPLATE = """Você é um especialista em elaboração de questões para concursos públicos brasileiros, com profundo conhecimento jurídico.
+GERAR_QUESTOES_TEMPLATE = """Você é um especialista em elaboração de questões para concursos públicos brasileiros no estilo FCC, com profundo conhecimento jurídico.
 
 ## CONTEXTO JURÍDICO (use como base para as questões):
 {contexto}
+
+{questoes_existentes}
 
 ## TAREFA:
 Elabore exatamente {quantidade} questão(ões) sobre: "{tema}"
@@ -54,7 +48,7 @@ Elabore exatamente {quantidade} questão(ões) sobre: "{tema}"
 - Nível: {nivel_dificuldade}
 - Tipo: {tipo_questao}
 - Formato esperado: {formato_questao}
-{estilo_banca}
+- Estilo: FCC com 5 alternativas, linguagem formal e foco em letra de lei
 
 ## REGRAS OBRIGATÓRIAS:
 1. Baseie-se PRIORITARIAMENTE no contexto jurídico fornecido
@@ -63,6 +57,9 @@ Elabore exatamente {quantidade} questão(ões) sobre: "{tema}"
 4. A justificativa deve ser didática, explicando o porquê de cada alternativa
 5. Use linguagem formal apropriada para concursos públicos
 6. Cada questão deve testar um aspecto diferente do tema
+7. **IMPORTANTE**: NÃO repita ou crie questões similares às já existentes mostradas acima
+8. Crie questões originais e diferentes das existentes
+9. Siga rigorosamente o estilo FCC: formal, direto, baseado em lei
 
 ## FORMATO DE SAÍDA:
 {format_instructions}

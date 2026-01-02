@@ -201,15 +201,40 @@ class VectorStoreService:
         try:
             k = k or settings.RAG_TOP_K
             
-            docs_with_scores = self._vectorstore.similarity_search_with_score(
-                query=query,
-                k=k
-            )
-            
-            documentos = [
-                doc for doc, score in docs_with_scores
-                if score >= settings.RAG_SCORE_THRESHOLD
-            ]
+            if filtro:
+                # Busca mais documentos para filtrar depois
+                docs_with_scores = self._vectorstore.similarity_search_with_score(
+                    query=query,
+                    k=k * 2
+                )
+                
+                documentos_filtrados = []
+                for doc, score in docs_with_scores:
+                    if score >= settings.RAG_SCORE_THRESHOLD:
+                        # Verifica se atende aos filtros
+                        atende_filtro = True
+                        for chave, valor in filtro.items():
+                            if doc.metadata.get(chave) != valor:
+                                atende_filtro = False
+                                break
+                        
+                        if atende_filtro:
+                            documentos_filtrados.append(doc)
+                        
+                        if len(documentos_filtrados) >= k:
+                            break
+                
+                documentos = documentos_filtrados
+            else:
+                docs_with_scores = self._vectorstore.similarity_search_with_score(
+                    query=query,
+                    k=k
+                )
+                
+                documentos = [
+                    doc for doc, score in docs_with_scores
+                    if score >= settings.RAG_SCORE_THRESHOLD
+                ]
             
             logger.info(f"🔍 Encontrados {len(documentos)} documentos")
             return documentos

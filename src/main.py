@@ -6,6 +6,7 @@ import uvicorn
 
 from api.perguntas import router as rotas_perguntas
 from api.responder import router as rotas_responder
+from api.documents import router as rotas_documents
 from core.config import settings
 from services.llm_service import verificar_ollama
 from services.vectorstore_service import VectorStoreService
@@ -79,6 +80,7 @@ Esta API utiliza **LangChain** com **RAG** (Retrieval-Augmented Generation) para
 # Routers
 app.include_router(rotas_perguntas)
 app.include_router(rotas_responder)
+app.include_router(rotas_documents)
 
 # CORS
 app.add_middleware(
@@ -98,13 +100,14 @@ async def root():
         "version": settings.APP_VERSION,
         "framework": "LangChain + FastAPI",
         "environment": settings.APP_ENV,
-        "message": "🚀 API está rodando!",
+        "message": "API está rodando!",
         "documentacao": "/docs",
         "endpoints": {
             "gerar_questoes": "POST /perguntas/criar",
             "responder_questao": "POST /responder/",
-            "indexar_documento": "POST /perguntas/indexar",
-            "buscar_documentos": "GET /perguntas/buscar"
+            "processar_pdfs": "POST /documents/process",
+            "buscar_documentos": "GET /documents/buscar",
+            "estatisticas": "GET /documents/estatisticas"
         }
     }
 

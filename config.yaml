@@ -1,0 +1,28 @@
+app:
+  name: "Gerador de Questões"
+  version: "1.0.0"
+  env: "development"
+  debug: true
+  host: "0.0.0.0"
+  port: 8000
+
+ollama:
+  base_url: "http://localhost:11434"
+  model: "llama3.2:3b"
+  embedding_model: "bge-m3:latest"
+
+opensearch:
+  host: "localhost"
+  port: 9200
+  user: "admin"
+  password: "Luluadmin"
+  index: "documentos_juridicos"
+  use_ssl: false
+
+rag:
+  top_k: 5
+  score_threshold: 0.5
+
+cors:
+  origins:
+    - "http://localhost:3000"

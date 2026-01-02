@@ -1,5 +1,6 @@
 import logging
 from typing import List
+from langchain_core.documents import Document
 
 from models.schemas import (
     CriarPerguntasRequest,
@@ -10,6 +11,7 @@ from models.schemas import (
     Alternativa
 )
 from services.rag_chain import RAGChainService
+from services.vectorstore_service import vectorstore_service
 
 logger = logging.getLogger(__name__)
 
@@ -31,12 +33,15 @@ class PerguntasService:
         questões mais precisas e fundamentadas.
         """
         try:
+            # Busca questões similares existentes
+            questoes_similares = await self._buscar_questoes_similares(request.tema)
+            
             resultado = await self.rag_chain.gerar_questoes(
                 tema=request.tema,
                 quantidade=request.quantidade,
                 dificuldade=request.dificuldade,
                 tipo=request.tipo,
-                banca=request.banca
+                questoes_existentes=questoes_similares
             )
             
             if not resultado.get("sucesso"):
@@ -49,6 +54,9 @@ class PerguntasService:
             
             # Converte para modelos Pydantic
             questoes = self._processar_questoes(resultado.get("questoes", []))
+            
+            # Salva as questões geradas no vector store
+            await self._salvar_questoes(questoes, request)
             
             return CriarPerguntasResponse(
                 sucesso=True,
@@ -136,6 +144,62 @@ class PerguntasService:
                 continue
         
         return questoes
+    
+    async def _buscar_questoes_similares(self, tema: str) -> List[str]:
+        """Busca questões similares já existentes"""
+        try:
+            docs = await vectorstore_service.buscar_similares(
+                query=tema,
+                k=3,
+                filtro={"tipo": "questao"}
+            )
+            
+            questoes_similares = []
+            for doc in docs:
+                questoes_similares.append(doc.page_content)
+            
+            return questoes_similares
+            
+        except Exception as e:
+            logger.warning(f"Erro ao buscar questões similares: {e}")
+            return []
+    
+    async def _salvar_questoes(self, questoes: List[QuestaoGerada], request: CriarPerguntasRequest):
+        """Salva questões geradas no vector store"""
+        try:
+            documentos = []
+            
+            for questao in questoes:
+                # Monta o conteúdo da questão
+                conteudo = f"Enunciado: {questao.enunciado}\n"
+                
+                if questao.alternativas:
+                    conteudo += "Alternativas:\n"
+                    for alt in questao.alternativas:
+                        conteudo += f"{alt.letra}) {alt.texto}\n"
+                
+                conteudo += f"Resposta: {questao.resposta_correta}\n"
+                conteudo += f"Justificativa: {questao.justificativa}"
+                
+                doc = Document(
+                    page_content=conteudo,
+                    metadata={
+                        "tipo": "questao",
+                        "tema": request.tema,
+                        "dificuldade": request.dificuldade,
+                        "tipo_questao": request.tipo,
+                        "banca": "FCC",
+                        "numero": questao.numero,
+                        "fonte_legal": questao.fonte_legal or ""
+                    }
+                )
+                documentos.append(doc)
+            
+            await vectorstore_service.adicionar_documentos(documentos)
+            logger.info(f"✅ Salvadas {len(documentos)} questões no vector store")
+            
+        except Exception as e:
+            logger.error(f"Erro ao salvar questões: {e}")
 
 
 # Singleton

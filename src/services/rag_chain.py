@@ -65,14 +65,14 @@ class RAGChainService:
         quantidade: int,
         dificuldade: DificuldadeEnum,
         tipo: TipoQuestaoEnum,
-        banca: str = None
+        questoes_existentes: List[str] = None
     ) -> Dict[str, Any]:
         """
-        Chain RAG para geração de questões.
+        Chain RAG para geração de questões no estilo FCC.
         
         Fluxo:
         1. Busca contexto relevante no VectorStore
-        2. Monta o prompt com contexto
+        2. Monta o prompt com contexto e questões existentes
         3. Gera questões via LLM
         4. Parseia resultado em JSON
         """
@@ -83,26 +83,25 @@ class RAGChainService:
             contexto = self._formatar_documentos(docs)
             fontes = self._extrair_fontes(docs)
             
-            # 2. Prepara variáveis do prompt
+            # 2. Formata questões existentes
+            questoes_existentes_texto = ""
+            if questoes_existentes:
+                questoes_existentes_texto = "## QUESTÕES SIMILARES JÁ EXISTENTES (NÃO REPETIR):\n"
+                for i, questao in enumerate(questoes_existentes, 1):
+                    questoes_existentes_texto += f"### Questão {i}:\n{questao}\n\n"
+            
+            # 3. Prepara variáveis do prompt
             nivel_dificuldade = PromptTemplates.NIVEIS_DIFICULDADE[dificuldade]
             formato_questao = PromptTemplates.FORMATOS_QUESTAO[tipo]
             
-            estilo_banca = ""
-            if banca:
-                estilo = PromptTemplates.ESTILOS_BANCA.get(
-                    banca.upper(), 
-                    f"estilo da banca {banca}"
-                )
-                estilo_banca = f"- Estilo: {estilo}"
-            
-            # 3. Monta a chain
+            # 4. Monta a chain
             prompt = get_gerar_questoes_prompt()
             llm = get_llm_creative(temperature=0.7)
             parser = JsonOutputParser(pydantic_object=QuestoesOutput)
             
             chain = prompt | llm | parser
             
-            # 4. Executa
+            # 5. Executa
             logger.info("Gerando questões via LLM...")
             resultado = await chain.ainvoke({
                 "contexto": contexto,
@@ -111,7 +110,7 @@ class RAGChainService:
                 "nivel_dificuldade": nivel_dificuldade,
                 "tipo_questao": tipo.value,
                 "formato_questao": formato_questao,
-                "estilo_banca": estilo_banca
+                "questoes_existentes": questoes_existentes_texto
             })
             
             return {

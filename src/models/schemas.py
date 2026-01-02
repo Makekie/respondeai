@@ -60,7 +60,6 @@ class CriarPerguntasRequest(BaseModel):
     quantidade: int = Field(default=5, ge=1, le=20, description="Quantidade de questões")
     dificuldade: DificuldadeEnum = Field(default=DificuldadeEnum.MEDIO)
     tipo: TipoQuestaoEnum = Field(default=TipoQuestaoEnum.MULTIPLA_ESCOLHA)
-    banca: Optional[str] = Field(default=None, description="Estilo de banca (CESPE, FCC, etc)")
     
     class Config:
         json_schema_extra = {
@@ -68,8 +67,7 @@ class CriarPerguntasRequest(BaseModel):
                 "tema": "Direito Constitucional - Direitos Fundamentais",
                 "quantidade": 5,
                 "dificuldade": "medio",
-                "tipo": "multipla_escolha",
-                "banca": "CESPE"
+                "tipo": "multipla_escolha"
             }
         }
 
