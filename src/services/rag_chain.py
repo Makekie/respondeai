@@ -71,15 +71,28 @@ class RAGChainService:
         Chain RAG para geração de questões no estilo FCC.
         
         Fluxo:
-        1. Busca contexto relevante no VectorStore
+        1. Busca contexto relevante no VectorStore (priorizando artigos em vigor)
         2. Monta o prompt com contexto e questões existentes
         3. Gera questões via LLM
         4. Parseia resultado em JSON
         """
         try:
-            # 1. Recupera contexto
+            # 1. Recupera contexto priorizando artigos em vigor
             logger.info(f"Buscando contexto para: {tema}")
-            docs = await self.vectorstore_service.buscar_similares(tema, k=5)
+            
+            # Busca primeiro artigos em vigor
+            docs_vigor = await self.vectorstore_service.buscar_similares(
+                tema, k=3, filtro={"em_vigor": True}
+            )
+            
+            # Complementa com outros artigos se necessário
+            docs_outros = await self.vectorstore_service.buscar_similares(
+                tema, k=5
+            )
+            
+            # Combina priorizando artigos em vigor
+            docs = docs_vigor + [d for d in docs_outros if d not in docs_vigor][:2]
+            
             contexto = self._formatar_documentos(docs)
             fontes = self._extrair_fontes(docs)
             

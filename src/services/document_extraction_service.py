@@ -174,44 +174,56 @@ class DocumentExtractionService:
         self, 
         caminho_pasta: str, 
         salvar_json: bool = True,
-        apenas_em_vigor: bool = True
-    ) -> bool:
+        incluir_vetados: bool = True
+    ) -> dict:
         """Pipeline completo: extrai PDFs, cria chunks e indexa"""
         try:
             # 1. Extrai artigos dos PDFs
             artigos = self.processar_pasta(caminho_pasta)
             if not artigos:
                 logger.error("❌ Nenhum artigo extraído")
-                return False
+                return {"sucesso": False}
             
-            # 2. Filtra apenas artigos em vigor se solicitado
-            if apenas_em_vigor:
-                artigos_vigor = [a for a in artigos if a["em_vigor"]]
-                logger.info(f"📋 Filtrando: {len(artigos_vigor)} artigos em vigor de {len(artigos)} total")
-                artigos = artigos_vigor
+            # 2. Conta estatísticas
+            total_artigos = len(artigos)
+            artigos_em_vigor = len([a for a in artigos if a["em_vigor"]])
+            artigos_vetados = total_artigos - artigos_em_vigor
             
-            # 3. Salva JSON se solicitado
+            logger.info(f"📊 Total: {total_artigos} | Em vigor: {artigos_em_vigor} | Vetados: {artigos_vetados}")
+            
+            # 3. Filtra artigos se necessário
+            artigos_para_indexar = artigos
+            if not incluir_vetados:
+                artigos_para_indexar = [a for a in artigos if a["em_vigor"]]
+                logger.info(f"📋 Indexando apenas artigos em vigor: {len(artigos_para_indexar)}")
+            
+            # 4. Salva JSON se solicitado
             if salvar_json:
                 caminho_json = os.path.join(caminho_pasta, "leis_unificadas.json")
                 self.salvar_json(artigos, caminho_json)
             
-            # 4. Cria chunks para indexação
-            documentos = self.criar_chunks(artigos)
+            # 5. Cria chunks para indexação
+            documentos = self.criar_chunks(artigos_para_indexar)
             logger.info(f"📄 Criados {len(documentos)} chunks")
             
-            # 5. Indexa no vector store
-            sucesso = await self.indexar_documentos(documentos)
+            # 6. Indexa no vector store
+            sucesso_indexacao = await self.indexar_documentos(documentos)
             
-            if sucesso:
+            if sucesso_indexacao:
                 logger.info("🎉 Pipeline concluído com sucesso!")
-                return True
+                return {
+                    "sucesso": True,
+                    "total_artigos": total_artigos,
+                    "artigos_em_vigor": artigos_em_vigor,
+                    "artigos_vetados": artigos_vetados
+                }
             else:
                 logger.error("❌ Falha na indexação")
-                return False
+                return {"sucesso": False}
                 
         except Exception as e:
             logger.error(f"❌ Erro no pipeline: {e}")
-            return False
+            return {"sucesso": False}
 
 
 # Singleton
