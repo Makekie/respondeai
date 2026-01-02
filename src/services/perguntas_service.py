@@ -82,17 +82,24 @@ class PerguntasService:
         """
         Responde uma questão de concurso.
         
-        Usa RAG para buscar fundamentos legais
-        e fornecer explicação detalhada.
+        Verifica se já existe resposta salva antes de processar.
         """
         try:
+            # 1. Busca se já existe resposta para esta pergunta
+            resposta_existente = await self._buscar_resposta_existente(request.pergunta)
+            
+            if resposta_existente:
+                logger.info("✅ Resposta encontrada no cache")
+                return resposta_existente
+            
+            # 2. Gera nova resposta
             resultado = await self.rag_chain.responder_questao(
                 pergunta=request.pergunta,
                 alternativas=request.alternativas,
                 contexto_adicional=request.contexto_adicional
             )
             
-            return ResponderPerguntaResponse(
+            response = ResponderPerguntaResponse(
                 sucesso=resultado.get("sucesso", False),
                 pergunta=request.pergunta,
                 resposta_correta=resultado.get("resposta_correta", ""),
@@ -101,6 +108,12 @@ class PerguntasService:
                 dicas_estudo=resultado.get("dicas_estudo"),
                 referencias=resultado.get("referencias")
             )
+            
+            # 3. Salva a resposta para futuras consultas
+            if response.sucesso:
+                await self._salvar_resposta(request, response)
+            
+            return response
             
         except Exception as e:
             logger.error(f"Erro ao responder: {e}")
@@ -200,6 +213,95 @@ class PerguntasService:
             
         except Exception as e:
             logger.error(f"Erro ao salvar questões: {e}")
+    
+    async def _buscar_resposta_existente(self, pergunta: str) -> ResponderPerguntaResponse:
+        """Busca resposta já existente para a pergunta"""
+        try:
+            docs = await vectorstore_service.buscar_similares(
+                query=pergunta,
+                k=3,
+                filtro={"tipo": "resposta"}
+            )
+            
+            # Verifica se alguma pergunta é muito similar (evita duplicações)
+            for doc in docs:
+                pergunta_salva = doc.metadata.get("pergunta", "")
+                
+                # Comparação simples de similaridade
+                if self._perguntas_similares(pergunta, pergunta_salva):
+                    logger.info(f"✅ Resposta encontrada para pergunta similar")
+                    metadata = doc.metadata
+                    
+                    return ResponderPerguntaResponse(
+                        sucesso=True,
+                        pergunta=pergunta,  # Usa a pergunta atual
+                        resposta_correta=metadata.get("resposta_correta", ""),
+                        explicacao_detalhada=metadata.get("explicacao_detalhada", ""),
+                        fundamento_legal=metadata.get("fundamento_legal", ""),
+                        dicas_estudo=metadata.get("dicas_estudo", []),
+                        referencias=metadata.get("referencias", [])
+                    )
+            
+            return None
+            
+        except Exception as e:
+            logger.warning(f"Erro ao buscar resposta existente: {e}")
+            return None
+    
+    def _perguntas_similares(self, pergunta1: str, pergunta2: str) -> bool:
+        """Verifica se duas perguntas são muito similares"""
+        # Remove espaços e converte para minúsculo
+        p1 = pergunta1.lower().strip()
+        p2 = pergunta2.lower().strip()
+        
+        # Se são idênticas
+        if p1 == p2:
+            return True
+        
+        # Verifica similaridade por palavras-chave
+        palavras1 = set(p1.split())
+        palavras2 = set(p2.split())
+        
+        # Se mais de 80% das palavras são comuns
+        intersecao = len(palavras1.intersection(palavras2))
+        uniao = len(palavras1.union(palavras2))
+        
+        similaridade = intersecao / uniao if uniao > 0 else 0
+        return similaridade > 0.8
+    
+    async def _salvar_resposta(self, request: ResponderPerguntaRequest, response: ResponderPerguntaResponse):
+        """Salva resposta no vector store para cache"""
+        try:
+            # Monta conteúdo da resposta
+            conteudo = f"Pergunta: {request.pergunta}\n"
+            
+            if request.alternativas:
+                conteudo += "Alternativas:\n"
+                for alt in request.alternativas:
+                    conteudo += f"{alt}\n"
+            
+            conteudo += f"\nResposta Correta: {response.resposta_correta}\n"
+            conteudo += f"Explicação: {response.explicacao_detalhada}\n"
+            conteudo += f"Fundamento Legal: {response.fundamento_legal}"
+            
+            doc = Document(
+                page_content=conteudo,
+                metadata={
+                    "tipo": "resposta",
+                    "pergunta": request.pergunta,
+                    "resposta_correta": response.resposta_correta,
+                    "explicacao_detalhada": response.explicacao_detalhada,
+                    "fundamento_legal": response.fundamento_legal,
+                    "dicas_estudo": response.dicas_estudo or [],
+                    "referencias": response.referencias or []
+                }
+            )
+            
+            await vectorstore_service.adicionar_documentos([doc])
+            logger.info("✅ Resposta salva no vector store")
+            
+        except Exception as e:
+            logger.error(f"Erro ao salvar resposta: {e}")
 
 
 # Singleton
