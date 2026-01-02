@@ -153,11 +153,33 @@ class VectorStoreService:
         return await self.criar_indice()
     
     async def adicionar_documentos(self, documentos: List[Document]) -> List[str]:
-        """Adiciona documentos ao vector store"""
+        """Adiciona documentos ao vector store em lotes pequenos"""
         try:
-            ids = self._vectorstore.add_documents(documentos)
-            logger.info(f"✅ Adicionados {len(ids)} documentos")
-            return ids
+            # Processa em lotes muito pequenos para evitar problemas de embedding
+            batch_size = 10  # Lotes pequenos para embeddings
+            all_ids = []
+            
+            for i in range(0, len(documentos), batch_size):
+                batch = documentos[i:i + batch_size]
+                logger.info(f"📦 Processando lote de embeddings {i//batch_size + 1}")
+                
+                try:
+                    ids = self._vectorstore.add_documents(batch)
+                    all_ids.extend(ids)
+                except Exception as batch_error:
+                    logger.error(f"❌ Erro no lote {i//batch_size + 1}: {batch_error}")
+                    # Tenta processar um por vez se o lote falhar
+                    for doc in batch:
+                        try:
+                            single_id = self._vectorstore.add_documents([doc])
+                            all_ids.extend(single_id)
+                        except Exception as single_error:
+                            logger.error(f"❌ Erro ao processar documento individual: {single_error}")
+                            continue
+            
+            logger.info(f"✅ Adicionados {len(all_ids)} documentos")
+            return all_ids
+            
         except Exception as e:
             logger.error(f"❌ Erro ao adicionar documentos: {e}")
             return []

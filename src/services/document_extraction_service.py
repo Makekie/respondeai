@@ -146,7 +146,7 @@ class DocumentExtractionService:
         return documentos
     
     async def indexar_documentos(self, documentos: List[Document]) -> bool:
-        """Indexa documentos no vector store"""
+        """Indexa documentos no vector store em lotes menores"""
         try:
             # Verifica conexão
             if not await vectorstore_service.verificar_conexao():
@@ -156,15 +156,24 @@ class DocumentExtractionService:
             # Cria índice se não existir
             await vectorstore_service.criar_indice()
             
-            # Adiciona documentos
-            ids = await vectorstore_service.adicionar_documentos(documentos)
+            # Processa em lotes menores para evitar erro de bulk_size
+            batch_size = 100  # Reduzido de 500 para 100
+            total_docs = len(documentos)
             
-            if ids:
-                logger.info(f"✅ {len(ids)} documentos indexados no vector store")
-                return True
-            else:
-                logger.error("❌ Falha ao indexar documentos")
-                return False
+            logger.info(f"📄 Indexando {total_docs} documentos em lotes de {batch_size}")
+            
+            for i in range(0, total_docs, batch_size):
+                batch = documentos[i:i + batch_size]
+                logger.info(f"📦 Processando lote {i//batch_size + 1}/{(total_docs + batch_size - 1)//batch_size}")
+                
+                ids = await vectorstore_service.adicionar_documentos(batch)
+                
+                if not ids:
+                    logger.error(f"❌ Falha ao indexar lote {i//batch_size + 1}")
+                    return False
+            
+            logger.info(f"✅ Todos os {total_docs} documentos indexados com sucesso")
+            return True
                 
         except Exception as e:
             logger.error(f"❌ Erro ao indexar documentos: {e}")
