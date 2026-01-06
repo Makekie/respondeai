@@ -21,15 +21,15 @@ class PromptTemplates:
 - Apenas UMA alternativa correta
 - Distratores plausíveis nas alternativas incorretas""",
         
-        TipoQuestaoEnum.CERTO_ERRADO: """
-- Uma afirmação assertiva para ser julgada
-- Resposta: CERTO ou ERRADO
-- A afirmação deve ser totalmente certa ou totalmente errada""",
+#         TipoQuestaoEnum.CERTO_ERRADO: """
+# - Uma afirmação assertiva para ser julgada
+# - Resposta: CERTO ou ERRADO
+# - A afirmação deve ser totalmente certa ou totalmente errada""",
         
-        TipoQuestaoEnum.DISSERTATIVA: """
-- Pergunta aberta que exija desenvolvimento
-- Resposta esperada com pontos principais
-- Critérios de correção claros"""
+#         TipoQuestaoEnum.DISSERTATIVA: """
+# - Pergunta aberta que exija desenvolvimento
+# - Resposta esperada com pontos principais
+# - Critérios de correção claros"""
     }
 
 
