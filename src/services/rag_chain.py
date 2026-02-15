@@ -228,8 +228,11 @@ class RAGChainService:
                 
                 # Normaliza o resultado para o formato esperado
                 if isinstance(resultado, dict):
+                    # Se tem 'QuestaoGerada' aninhada
+                    if "QuestaoGerada" in resultado:
+                        resultado = {"questoes": [resultado["QuestaoGerada"]]}
                     # Se retornou uma questão individual (tem 'numero' e 'enunciado' no nível raiz)
-                    if "numero" in resultado and "enunciado" in resultado:
+                    elif "numero" in resultado and "enunciado" in resultado:
                         resultado = {"questoes": [resultado]}
                     # Se tem 'questoes' no formato correto
                     elif "questoes" in resultado:
