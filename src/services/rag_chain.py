@@ -1,8 +1,10 @@
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda, RunnableParallel
 from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
 from langchain_core.documents import Document
+from langchain_core.messages import AIMessage
 from typing import List, Dict, Any, Optional
 import logging
+import json
 
 from services.llm_service import get_llm_creative, get_llm_precise
 from services.vectorstore_service import VectorStoreService
@@ -212,10 +214,22 @@ class RAGChainService:
                     "questoes_existentes": questoes_existentes_texto
                 })
                 
+                # Se retornou AIMessage, extrai o conteúdo
+                if isinstance(resultado, AIMessage):
+                    try:
+                        resultado = json.loads(resultado.content)
+                    except json.JSONDecodeError:
+                        logger.error(f"Erro ao parsear conteúdo do AIMessage: {resultado.content[:500]}")
+                        return {
+                            "sucesso": False,
+                            "questoes": [],
+                            "erro": "LLM retornou JSON inválido"
+                        }
+                
                 # Verifica se o resultado é válido
                 if isinstance(resultado, dict):
                     # Se retornou uma questão individual, converte para array
-                    if "numero" in resultado['QuestaoGerada'] and "enunciado" in resultado['QuestaoGerada']:
+                    if "numero" in resultado.get('QuestaoGerada', {}) and "enunciado" in resultado.get('QuestaoGerada', {}):
                         resultado = {"questoes": [resultado['QuestaoGerada']]}
                     # Se já tem o formato correto
                     elif "questoes" in resultado:
@@ -326,6 +340,21 @@ class RAGChainService:
                     "alternativas_texto": alternativas_texto,
                     "contexto_adicional": ctx_adicional
                 })
+                
+                # Se retornou AIMessage, extrai o conteúdo
+                if isinstance(resultado, AIMessage):
+                    try:
+                        resultado = json.loads(resultado.content)
+                    except json.JSONDecodeError:
+                        logger.error(f"Erro ao parsear conteúdo do AIMessage: {resultado.content[:500]}")
+                        return {
+                            "sucesso": False,
+                            "resposta_correta": "",
+                            "explicacao_detalhada": "LLM retornou JSON inválido",
+                            "fundamento_legal": "",
+                            "dicas_estudo": [],
+                            "referencias": []
+                        }
                 
                 # Verifica se o resultado é válido
                 if not isinstance(resultado, dict):
