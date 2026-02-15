@@ -226,12 +226,12 @@ class RAGChainService:
                             "erro": "LLM retornou JSON inválido"
                         }
                 
-                # Verifica se o resultado é válido
+                # Normaliza o resultado para o formato esperado
                 if isinstance(resultado, dict):
-                    # Se retornou uma questão individual, converte para array
-                    if "numero" in resultado.get('QuestaoGerada', {}) and "enunciado" in resultado.get('QuestaoGerada', {}):
-                        resultado = {"questoes": [resultado['QuestaoGerada']]}
-                    # Se já tem o formato correto
+                    # Se retornou uma questão individual (tem 'numero' e 'enunciado' no nível raiz)
+                    if "numero" in resultado and "enunciado" in resultado:
+                        resultado = {"questoes": [resultado]}
+                    # Se tem 'questoes' no formato correto
                     elif "questoes" in resultado:
                         pass
                     else:
