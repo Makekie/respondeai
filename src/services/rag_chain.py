@@ -215,8 +215,8 @@ class RAGChainService:
                 # Verifica se o resultado é válido
                 if isinstance(resultado, dict):
                     # Se retornou uma questão individual, converte para array
-                    if "numero" in resultado and "enunciado" in resultado:
-                        resultado = {"questoes": [resultado]}
+                    if "numero" in resultado['QuestaoGerada'] and "enunciado" in resultado['QuestaoGerada']:
+                        resultado = {"questoes": [resultado['QuestaoGerada']]}
                     # Se já tem o formato correto
                     elif "questoes" in resultado:
                         pass

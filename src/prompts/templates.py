@@ -35,21 +35,13 @@ class PromptTemplates:
 
 # ============ PROMPT PARA GERAR QUESTÕES ============
 GERAR_QUESTOES_TEMPLATE = """Você é um especialista em elaboração de questões para concursos públicos brasileiros no estilo FCC, com profundo conhecimento jurídico.
-
-## CONTEXTO JURÍDICO (use como base para as questões):
-{contexto}
-
-{questoes_existentes}
-
 ## TAREFA:
 Elabore exatamente {quantidade} questão(ões) sobre: "{tema}"
-
 ## ESPECIFICAÇÕES:
 - Nível: {nivel_dificuldade}
 - Tipo: {tipo_questao}
 - Formato esperado: {formato_questao}
 - Estilo: FCC com 5 alternativas, linguagem formal e foco em letra de lei
-
 ## REGRAS OBRIGATÓRIAS:
 1. Baseie-se PRIORITARIAMENTE no contexto jurídico fornecido
 2. Cite artigos, leis, súmulas e jurisprudências quando aplicável
@@ -60,11 +52,12 @@ Elabore exatamente {quantidade} questão(ões) sobre: "{tema}"
 7. **IMPORTANTE**: NÃO repita ou crie questões similares às já existentes mostradas acima
 8. Crie questões originais e diferentes das existentes
 9. Siga rigorosamente o estilo FCC: formal, direto, baseado em lei
-
 ## FORMATO DE SAÍDA:
 {format_instructions}
-
-Gere as {quantidade} questões agora:"""
+## CONTEXTO JURÍDICO (use como base para as questões):
+{contexto}
+{questoes_existentes}
+"""
 
 
 def get_gerar_questoes_prompt() -> ChatPromptTemplate:
